@@ -19,7 +19,9 @@ const PORT = process.env.PORT || 3000;
  * 2. Debe retornar el arreglo con status 200.
  */
 app.get('/equipos', async (req, res) => {
-    // Tu código aquí
+    const equipos = await Equipo.find();
+
+    return res.status(200).json(equipos);
 });
 
 /**
@@ -32,7 +34,16 @@ app.get('/equipos', async (req, res) => {
  * IMPORTANTE: ¡Esta ruta debe ir ANTES que la ruta GET /equipos/:id!
  */
 app.get('/equipos/buscar', async (req, res) => {
-    // Tu código aquí
+     const { tecnico } = req.query;
+
+    const equipos = await Equipo.find({
+        tecnico: {
+            $regex: tecnico,
+            $options: 'i',
+        },
+    });
+
+    return res.status(200).json(equipos);
 });
 
 /**
@@ -45,7 +56,19 @@ app.get('/equipos/buscar', async (req, res) => {
  * 5. Si no lo encuentra, retornar un status 404 y { error: "Equipo no encontrado" }.
  */
 app.get('/equipos/:id', async (req, res) => {
-    // Tu código aquí
+     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const equipo = await Equipo.findById(id);
+
+    if (!equipo) {
+        return res.status(404).json({ error: 'Equipo no encontrado' });
+    }
+
+    return res.status(200).json(equipo);
 });
 
 /**
@@ -57,7 +80,18 @@ app.get('/equipos/:id', async (req, res) => {
  * 4. Si se guarda exitosamente, debe retornar el nuevo equipo y status 201.
  */
 app.post('/equipos', async (req, res) => {
-    // Tu código aquí
+    try {
+        const nuevoEquipo = await Equipo.create({
+            equipo: req.body.equipo,
+            tecnico: req.body.tecnico,
+            continente: req.body.continente,
+            campeonatos_mundiales: req.body.campeonatos_mundiales,
+        });
+
+        return res.status(201).json(nuevoEquipo);
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
 });
 
 /**
@@ -70,7 +104,43 @@ app.post('/equipos', async (req, res) => {
  * 5. Si hay errores de validación (por ejemplo, tipos incorrectos), retorna 400.
  */
 app.put('/equipos/:id', async (req, res) => {
-    // Tu código aquí
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const { equipo, tecnico, continente, campeonatos_mundiales } = req.body;
+
+    if (
+        typeof equipo !== 'string' ||
+        typeof tecnico !== 'string' ||
+        typeof continente !== 'string' ||
+        typeof campeonatos_mundiales !== 'number'
+    ) {
+        return res.status(400).json({
+          error: 'Datos inválidos',
+        });
+    }
+
+    try {
+        const equipoActualizado = await Equipo.findByIdAndUpdate(
+            id,
+            req.body,
+            {
+                new: true,
+                runValidators: true,
+            }
+        );
+
+        if (!equipoActualizado) {
+            return res.status(404).json({ error: 'Equipo no encontrado' });
+        }
+
+        return res.status(200).json(equipoActualizado);
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
 });
 
 /**
@@ -81,7 +151,21 @@ app.put('/equipos/:id', async (req, res) => {
  * 4. Si se eliminó correctamente, retorna status 200.
  */
 app.delete('/equipos/:id', async (req, res) => {
-    // Tu código aquí
+     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+    }
+
+    const equipoEliminado = await Equipo.findByIdAndDelete(id);
+
+    if (!equipoEliminado) {
+        return res.status(404).json({ error: 'Equipo no encontrado' });
+    }
+
+    return res.status(200).json({
+        mensaje: 'Equipo eliminado correctamente',
+    });
 });
 
 // Iniciar el servidor solo si este archivo se ejecuta directamente
